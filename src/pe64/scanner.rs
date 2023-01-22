@@ -232,6 +232,14 @@ impl<'a, 'pat, P: Scan<'a>> Exec<'pat, P> {
 						return false;
 					}
 				},
+				pat::Atom::Rva => {
+					if let Some(rva) = self.pe.read::<Rva>(self.cursor) {
+						self.cursor = rva;
+					}
+					else {
+						return false;
+					}
+				},
 				pat::Atom::Pir(slot) => {
 					if let Some(sdword) = self.pe.read::<i32>(self.cursor) {
 						let base = save.get(slot as usize).cloned().unwrap_or(self.cursor);

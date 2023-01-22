@@ -144,6 +144,10 @@ pub enum Atom {
 	///
 	/// Matching fails immediately when translation to an RVA fails.
 	Ptr,
+	/// Folows an rva.
+	/// ///
+	/// /// Reads the rva under the cursor, assigns it to the cursor and continues matching.
+	Rva,
 	/// Follows a position independent reference.
 	///
 	/// Reads the dword under the cursor and adds it to the saved cursor for the given slot and continues matching.
@@ -235,9 +239,10 @@ pub fn save_len(pat: &[Atom]) -> usize {
 /// 31 c0 74 % ' c3
 /// e8 $ ' 31 c0 c3
 /// 68 * ' 31 c0 c3
+/// /// ff 25 $ r [2] "CreateFile" 00
 /// ```
 ///
-/// These symbols are used to follow; a signed 1 byte relative jump: `%`, a signed 4 byte relative jump: `$` and an absolute pointer: `*`.
+/// These symbols are used to follow; a signed 1 byte relative jump: `%`, a signed 4 byte relative jump: `$`, an absolute pointer: `*` or rva: `r`.
 ///
 /// They are designed to be able to have the scanner follow short jumps, calls and longer jumps, and absolute pointers.
 ///
@@ -323,6 +328,8 @@ fn parse_helper(pat: &mut &str, result: &mut Vec<Atom>) -> Result<(), PatError> 
 			b'$' => result.push(Atom::Jump4),
 			// Follow pointer
 			b'*' => result.push(Atom::Ptr),
+			// Folow rva
+			b'r' => result.push(Atom::Rva),
 			// Start recursive operator
 			b'{' => {
 				depth += 1;
@@ -331,6 +338,7 @@ fn parse_helper(pat: &mut &str, result: &mut Vec<Atom>) -> Result<(), PatError> 
 					Some(atom @ Atom::Jump1) => mem::replace(atom, Atom::Push(1)),
 					Some(atom @ Atom::Jump4) => mem::replace(atom, Atom::Push(4)),
 					Some(atom @ Atom::Ptr) => mem::replace(atom, Atom::Push(PTR_SKIP)),
+					Some(atom @ Atom::Rva) => mem::replace(atom, Atom::Push(PTR_SKIP)),
 					_ => return Err(PatError::StackInvalid),
 				};
 				result.push(atom);
